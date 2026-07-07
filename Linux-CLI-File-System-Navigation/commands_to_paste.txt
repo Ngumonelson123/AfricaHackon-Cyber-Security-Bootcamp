@@ -1,0 +1,44 @@
+# ============================================================
+#  CLI_Assignment — copy-paste blocks (RECOMMENDED method)
+#  Paste each block into your terminal, one block at a time.
+#  Every line executes AND is recorded in your shell history,
+#  so history-based screenshots (4 and 6) come out authentic.
+# ============================================================
+
+# ---------- SECTION 1 — then take Screenshot 1 ----------
+pwd
+ls -la ~
+cd /etc && cd ~
+pwd
+
+# ---------- SECTION 2 (part A: build everything) ----------
+mkdir ~/cli_test
+mkdir ~/cli_test/project1 ~/cli_test/project2 ~/cli_test/project3
+touch ~/cli_test/project1/README.txt
+echo "This is a CLI test project" > ~/cli_test/project1/README.txt
+cp ~/cli_test/project1/README.txt ~/cli_test/project2/
+cp ~/cli_test/project1/README.txt ~/cli_test/project3/
+mv ~/cli_test/project1/README.txt ~/cli_test/project1/PROJECT_INFO.txt
+
+# ---------- SECTION 2 (part B: evidence) ----------
+# Run this, take Screenshot 2:
+ls -R ~/cli_test
+# Run this, take Screenshot 3:
+cat ~/cli_test/project1/PROJECT_INFO.txt
+
+# ---------- SECTION 3 — cleanup ----------
+mv ~/cli_test/project1/PROJECT_INFO.txt ~/
+rm -r ~/cli_test
+ls ~
+# Now show the history containing mv and rm -r, take Screenshot 4:
+history | tail -10
+
+# ---------- SECTION 4 — then take Screenshot 5 ----------
+ps aux | head -15
+free -h
+journalctl -n 10 --no-pager
+# (if permission denied:  sudo journalctl -n 10 --no-pager )
+
+# ---------- SECTION 5 — then take Screenshot 6 ----------
+history | tail -5
+history | grep ls | wc -l
