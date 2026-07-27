@@ -1,0 +1,10 @@
+=== whatweb (technology + header fingerprinting) ===
+--- africahackon.com ---
+[1m[34mhttps://africahackon.com[0m [415 Unsupported Media Type] [1mCountry[0m[[0m[22mRESERVED[0m][[1m[31mZZ[0m], [1mHTTPServer[0m[[1m[36mcloudflare[0m], [1mIP[0m[[0m[22m172.67.213.104[0m], [1mTitle[0m[[1m[33m415 Unsupported Media Type[0m], [1mUncommonHeaders[0m[[0m[22mcf-cache-status,nel,report-to,cf-ray,alt-svc[0m]
+
+--- talent.africahackon.com ---
+[1m[34mhttps://talent.africahackon.com[0m [415 Unsupported Media Type] [1mCountry[0m[[0m[22mUNITED STATES[0m][[1m[31mUS[0m], [1mHTTPServer[0m[[1m[36mopenresty/1.31.1.1[0m], [1mIP[0m[[0m[22m68.66.226.122[0m], [1mOpenResty[0m[[1m[32m1.31.1.1[0m], [1mTitle[0m[[1m[33m415 Unsupported Media Type[0m]
+
+--- learnlinux.africahackon.com ---
+[1m[34mhttps://learnlinux.africahackon.com[0m [200 OK] [1mCountry[0m[[0m[22mUNITED STATES[0m][[1m[31mUS[0m], [1mHTML5[0m, [1mHTTPServer[0m[[1m[36mVercel[0m], [1mIP[0m[[0m[22m64.29.17.65[0m], [1mMetaGenerator[0m[[0m[22mv0.app[0m], [1mScript[0m, [1mStrict-Transport-Security[0m[[0m[22mmax-age=63072000[0m], [1mTitle[0m[[1m[33mAfricaHackon - Linux Training Platform[0m], [1mUncommonHeaders[0m[[0m[22maccess-control-allow-origin,x-matched-path,x-nextjs-prerender,x-nextjs-stale-time,x-vercel-cache,x-vercel-id[0m]
+

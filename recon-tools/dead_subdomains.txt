@@ -1,0 +1,12 @@
+autodiscover.africahackon.com
+conference.africahackon.com
+ctf.africahackon.com
+fresh.africahackon.com
+img.africahackon.com
+login.africahackon.com
+my.africahackon.com
+vpn.africahackon.com
+www.conference.africahackon.com
+www.fresh.africahackon.com
+www.intel.africahackon.com
+www.learnlinux.africahackon.com

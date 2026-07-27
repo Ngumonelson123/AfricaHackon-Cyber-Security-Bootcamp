@@ -1,0 +1,48 @@
+=== africahackon.com ===
+[+] The site [1;94mhttps://africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== learn.africahackon.com ===
+[+] The site [1;94mhttps://learn.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== academy.africahackon.com ===
+[+] The site [1;94mhttps://academy.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== cpanel.africahackon.com ===
+[+] The site [1;94mhttps://cpanel.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== webmail.africahackon.com ===
+[+] The site [1;94mhttps://webmail.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== dojo.africahackon.com ===
+[+] The site [1;94mhttps://dojo.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== intel.africahackon.com ===
+[-] No WAF detected by the generic detection
+[~] Number of requests: 7
+
+=== learnlinux.africahackon.com ===
+[-] No WAF detected by the generic detection
+[~] Number of requests: 7
+
+=== talent.africahackon.com ===
+[-] No WAF detected by the generic detection
+[~] Number of requests: 7
+
+=== summit.africahackon.com ===
+[+] The site [1;94mhttps://summit.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== events.africahackon.com ===
+[+] The site [1;94mhttps://events.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+
+=== lms.africahackon.com ===
+[+] The site [1;94mhttps://lms.africahackon.com[0m is behind [1;96mCloudflare (Cloudflare Inc.)[0m WAF.
+[~] Number of requests: 2
+

@@ -1,0 +1,74 @@
+=== nmap (network-level firewall / port filtering check) ===
+--- africahackon.com ---
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-07-27 17:58 EAT
+Nmap scan report for africahackon.com (172.67.213.104)
+Host is up (0.061s latency).
+Other addresses for africahackon.com (not scanned): 104.21.53.140 2606:4700:3033::ac43:d568 2606:4700:3035::6815:358c
+Not shown: 96 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+80/tcp   open  http
+443/tcp  open  https
+8080/tcp open  http-proxy
+8443/tcp open  https-alt
+
+Nmap done: 1 IP address (1 host up) scanned in 7.69 seconds
+
+--- talent.africahackon.com ---
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-07-27 17:58 EAT
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+RTTVAR has grown to over 2.3 seconds, decreasing to 2.0
+
+--- cpanel.africahackon.com ---
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-07-27 17:59 EAT
+Nmap scan report for cpanel.africahackon.com (104.21.53.140)
+Host is up (0.077s latency).
+Other addresses for cpanel.africahackon.com (not scanned): 172.67.213.104 2606:4700:3033::ac43:d568 2606:4700:3035::6815:358c
+Not shown: 96 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+80/tcp   open  http
+443/tcp  open  https
+8080/tcp open  http-proxy
+8443/tcp open  https-alt
+
+Nmap done: 1 IP address (1 host up) scanned in 9.39 seconds
+
+--- talent.africahackon.com (retry, lighter) ---
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-07-27 17:59 EAT
+Nmap scan report for talent.africahackon.com (68.66.226.122)
+Host is up (0.28s latency).
+Other addresses for talent.africahackon.com (not scanned): 64:ff9b::4442:e27a
+rDNS record for 68.66.226.122: az1-tr100.supercp.com
+
+PORT     STATE    SERVICE
+21/tcp   filtered ftp
+22/tcp   filtered ssh
+23/tcp   filtered telnet
+25/tcp   filtered smtp
+53/tcp   closed   domain
+80/tcp   open     http
+110/tcp  filtered pop3
+111/tcp  closed   rpcbind
+135/tcp  closed   msrpc
+139/tcp  closed   netbios-ssn
+143/tcp  filtered imap
+443/tcp  open     https
+445/tcp  filtered microsoft-ds
+993/tcp  filtered imaps
+995/tcp  filtered pop3s
+1723/tcp closed   pptp
+3306/tcp closed   mysql
+3389/tcp filtered ms-wbt-server
+5900/tcp filtered vnc
+8080/tcp filtered http-proxy
+
+Nmap done: 1 IP address (1 host up) scanned in 2.51 seconds
