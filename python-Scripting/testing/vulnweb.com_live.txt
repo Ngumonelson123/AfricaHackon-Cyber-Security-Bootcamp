@@ -1,0 +1,3 @@
+http://rest.vulnweb.com
+http://testasp.vulnweb.com
+http://testaspnet.vulnweb.com
