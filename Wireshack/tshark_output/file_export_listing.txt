@@ -1,0 +1,8 @@
+$ tshark -r "Noobs Keylogger.pcap" --export-objects ftp-data,/tmp/export_check
+
+Exported objects:
+total 60
+drwxrwxr-x  2 nelson-ngumo nelson-ngumo  4096 Aug 26 23:17 .
+drwxrwxrwt 39 root         root         45056 Aug 26 23:17 ..
+-rw-r--r--  1 nelson-ngumo nelson-ngumo   579 Aug 26 23:17 Keys_2018-11-28_16-04-42.html
+-rw-r--r--  1 nelson-ngumo nelson-ngumo   621 Aug 26 23:17 Web_2018-11-29_11-28-13.html

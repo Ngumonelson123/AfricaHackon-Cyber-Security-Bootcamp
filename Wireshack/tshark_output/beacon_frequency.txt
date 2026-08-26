@@ -1,0 +1,8 @@
+$ tshark -r "Noobs Keylogger.pcap" -Y "ftp.request.command == \"STOR\" || (tcp.flags.syn==1 && tcp.flags.ack==0 && ip.dst==140.82.59.185)" -T fields -e frame.number -e frame.time_relative -e ip.dst -e tcp.dstport -e ftp.request.arg
+
+10	0.065613000	140.82.59.185	21	
+137	2.077678000	140.82.59.185	18439	
+145	2.446646000	140.82.59.185	21	Keys_2018-11-28_16-04-42.html
+1783	63.396400000	140.82.59.185	21	
+1862	65.249860000	140.82.59.185	5142	
+1866	65.502663000	140.82.59.185	21	Web_2018-11-29_11-28-13.html
