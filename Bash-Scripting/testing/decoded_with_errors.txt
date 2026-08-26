@@ -1,0 +1,11 @@
+password123
+admin123
+qwerty
+[DECODE ERROR: line 4 is not valid Base64: 'not-valid-base64!!!']
+letmein
+welcome1
+iloveyou
+123456
+12345678
+football
+monkey
