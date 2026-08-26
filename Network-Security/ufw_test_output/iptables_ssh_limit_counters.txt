@@ -1,0 +1,12 @@
+Chain ufw-user-input (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    9   524            6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:22 ctstate NEW recent: SET name: DEFAULT side: source mask: 255.255.255.255
+    3   180 ufw-user-limit  6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:22 ctstate NEW recent: UPDATE seconds: 30 hit_count: 6 name: DEFAULT side: source mask: 255.255.255.255
+    6   344 ufw-user-limit-accept  6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:22
+    1    44 ACCEPT     6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:80
+    1    44 ACCEPT     6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:443
+    2    88 DROP       6    --  *      *       0.0.0.0/0            0.0.0.0/0            tcp dpt:23
+Chain ufw-user-limit (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    3   180 LOG        0    --  *      *       0.0.0.0/0            0.0.0.0/0            limit: avg 3/min burst 5 LOG flags 0 level 4 prefix "[UFW LIMIT BLOCK] "
+    3   180 REJECT     0    --  *      *       0.0.0.0/0            0.0.0.0/0            reject-with icmp-port-unreachable

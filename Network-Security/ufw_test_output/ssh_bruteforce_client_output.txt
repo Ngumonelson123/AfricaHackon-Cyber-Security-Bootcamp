@@ -1,0 +1,16 @@
+$ docker exec ufwlab-attacker bash -c 'for i in $(seq 1 8); do
+  sshpass -p "wrongpass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 \
+    -o PreferredAuthentications=password labuser@172.19.0.2 "echo hi"
+done'
+
+Permission denied, please try again.
+Permission denied, please try again.
+Permission denied, please try again.
+Permission denied, please try again.
+Permission denied, please try again.
+ssh: connect to host 172.19.0.2 port 22: Connection refused
+ssh: connect to host 172.19.0.2 port 22: Connection refused
+ssh: connect to host 172.19.0.2 port 22: Connection refused
+
+# First 5 attempts reached sshd (wrong password rejected).
+# Attempts 6-8 were REJECTed by UFW's rate limiter before reaching sshd.

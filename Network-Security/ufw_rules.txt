@@ -1,0 +1,46 @@
+UFW Firewall Rules — Basic Traffic Control & Logging
+Prepared by: Nelson Ngumo
+Date: 24 August 2026
+
+# --- Setup ---
+sudo apt update
+sudo apt install ufw -y
+sudo ufw enable
+sudo ufw logging on
+
+# --- Rule 1: Rate-limit SSH (mitigate brute-force) ---
+sudo ufw limit 22/tcp
+# Why: Any host making more than 6 connection attempts within 30 seconds is
+# temporarily denied. This slows/blocks brute-force login attempts while still
+# allowing legitimate users through, and every limited attempt is logged to
+# /var/log/ufw.log.
+
+# --- Rule 2: Allow essential services (baseline normal traffic) ---
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+# Why: Establishes a baseline of expected, legitimate traffic so that scan
+# activity on other ports stands out clearly against it in the logs.
+
+# --- Rule 3: Explicitly deny an unused/commonly scanned port ---
+sudo ufw deny 23/tcp
+# Why: Telnet is insecure and a common reconnaissance target. Explicitly
+# denying it (rather than leaving it simply unopened) produces a clear,
+# logged DENY entry whenever it is probed — useful evidence of scanning.
+
+# --- Rule 4: Default-deny posture (detect/limit SYN scans) ---
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+# Why: Closes every port that is not explicitly allowed. An Nmap SYN scan
+# sweeping many ports will generate a burst of logged DENY entries from a
+# single source IP within a short time window, making the scan clearly
+# visible in /var/log/ufw.log.
+
+# --- Verification ---
+sudo ufw status verbose
+
+# --- Testing ---
+# From a second machine:
+#   SSH brute-force simulation:  for i in {1..8}; do ssh user@<UFW_VM_IP>; done
+#   SYN scan simulation:         nmap -sS <UFW_VM_IP>
+# On the UFW VM, monitor live:
+#   sudo tail -f /var/log/ufw.log

@@ -1,0 +1,16 @@
+$ docker exec ufwlab-attacker nmap -sS -p 21,22,23,80,443,3389,8080 172.19.0.2
+
+Starting Nmap 7.94SVN ( https://nmap.org )
+Nmap scan report for ufwlab-victim.ufwlab-net (172.19.0.2)
+Host is up (0.00016s latency).
+
+PORT     STATE    SERVICE
+21/tcp   filtered ftp
+22/tcp   open     ssh
+23/tcp   filtered telnet
+80/tcp   closed   http
+443/tcp  closed   https
+3389/tcp filtered ms-wbt-server
+8080/tcp filtered http-proxy
+
+Nmap done: 1 IP address (1 host up) scanned in 1.54 seconds
