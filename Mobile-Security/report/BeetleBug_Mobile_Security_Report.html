@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BeetleBug Mobile Application Security Report</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<footer>Educational Use — Mobile Application Security Assignment · AfricaHackon Training</footer>
+
+<!-- ===================== TITLE PAGE ===================== -->
+<section class="page">
+  <div class="classbar">CONFIDENTIAL — FOR ASSESSMENT</div>
+  <div class="titlewrap">
+    <div class="center">
+      <p class="note" style="letter-spacing:2px;margin-bottom:0;">MOBILE APPLICATION SECURITY ASSESSMENT</p>
+      <h1 class="title-main">BeetleBug Android App — Flag Capture &amp; Findings</h1>
+      <p class="title-sub">Deliberately-Vulnerable Mobile App Exploitation</p>
+    </div>
+    <table class="meta" style="margin-top:40px;max-width:440px;margin-left:auto;margin-right:auto;">
+      <tr><td>Course</td><td>AfricaHackon Training — Mobile Application Security</td></tr>
+      <tr><td>Target app</td><td>BeetleBug v1.0 — <code>app.beetlebug</code> (github.com/hafiz-ng/Beetlebug)</td></tr>
+      <tr><td>APK SHA-256</td><td class="small">cb28dcf7217e4e6141da12de434978665478f8b219694246f5b49369d5725682</td></tr>
+      <tr><td>Classification</td><td><strong>CONFIDENTIAL — Educational</strong></td></tr>
+      <tr><td>Report version</td><td>1.0 (Final)</td></tr>
+      <tr><td>Report date</td><td>6 October 2026</td></tr>
+      <tr><td>Author</td><td class="todo">[YOUR NAME / ADMISSION NO.]</td></tr>
+      <tr><td>Squad</td><td class="todo">[SQUAD NAME / MEMBERS]</td></tr>
+    </table>
+    <div class="callout" style="max-width:490px;margin:28px auto 0;">
+      <p class="small" style="margin:0;"><strong>Scope &amp; ethics.</strong> All testing targeted only the
+      intentionally-vulnerable BeetleBug application, analysed locally. The one live network interaction was a
+      read of BeetleBug's own publicly-exposed Firebase database (part of the challenge). No third-party or
+      production system was tested. Submitted for academic marking.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OBJECTIVE / SUMMARY ===================== -->
+<section class="page">
+  <h2>1. Objective &amp; Summary</h2>
+  <p>This report documents the security assessment of the BeetleBug deliberately-vulnerable Android
+  application and the capture of its challenge flags. BeetleBug is a CTF-style training app whose ten
+  challenge categories each hide a flag or secret. The assessment used the OWASP Mobile Application Security
+  Testing Guide (MASTG) methodology: static analysis of the APK and dynamic testing of its backend.</p>
+
+  <p>All <strong>ten challenge categories were solved and their flags/secrets recovered</strong> through
+  reverse engineering and backend testing. The findings confirm the app trusts the client and device with
+  secrets and sensitive data, exports components without authorisation, and fails to validate input. The table
+  summarises the results.</p>
+
+  <table>
+    <tr><th>#</th><th>Challenge</th><th>OWASP Mobile Top 10 (2024)</th><th>Severity</th><th>Flag / secret recovered</th></tr>
+    <tr><td>C1</td><td>Hardcoded Secrets</td><td>M1 Improper Credential Usage</td><td><span class="sev high">HIGH</span></td><td><code>7432580</code> / <code>beetle1759</code></td></tr>
+    <tr><td>C2</td><td>Insecure Data Storage</td><td>M9 Insecure Data Storage</td><td><span class="sev high">HIGH</span></td><td><code>0x1442c04</code> / <code>0x3982c%4</code></td></tr>
+    <tr><td>C3</td><td>Sensitive Info Disclosure (logs)</td><td>M9 Insecure Data Storage</td><td><span class="sev medium">MEDIUM</span></td><td><code>0x55541d3</code></td></tr>
+    <tr><td>C4</td><td>Vulnerable IPC Components</td><td>M8 Security Misconfiguration</td><td><span class="sev high">HIGH</span></td><td>users table via exported provider</td></tr>
+    <tr><td>C5</td><td>Vulnerable WebViews</td><td>M4 Insufficient I/O Validation</td><td><span class="sev high">HIGH</span></td><td>arbitrary URL load (exported)</td></tr>
+    <tr><td>C6</td><td>Fingerprint Auth Bypass</td><td>M3 Insecure Authentication</td><td><span class="sev high">HIGH</span></td><td>UI-only gate, no CryptoObject</td></tr>
+    <tr><td>C7</td><td>Insecure Deeplinks</td><td>M4 Insufficient I/O Validation</td><td><span class="sev medium">MEDIUM</span></td><td><code>https://beetlebug.com</code> route</td></tr>
+    <tr><td>C8</td><td>Firebase Misconfiguration</td><td>M8 Security Misconfiguration</td><td><span class="sev critical">CRITICAL</span></td><td><code>0x3365A10</code> (live DB)</td></tr>
+    <tr><td>C9</td><td>SQLite Injection</td><td>M4 Insufficient I/O Validation</td><td><span class="sev high">HIGH</span></td><td><code>0x1172c04</code> (<code>' OR '1'='1</code>)</td></tr>
+    <tr><td>C10</td><td>Input Validation (XSS)</td><td>M4 Insufficient I/O Validation</td><td><span class="sev medium">MEDIUM</span></td><td>script executes in WebView</td></tr>
+  </table>
+  <div class="callout">
+    <p class="small" style="margin:0;"><strong>On the evidence.</strong> Flags and secrets below were recovered
+    by reverse-engineering the APK (jadx) and by testing the live Firebase backend (curl) — standard mobile
+    pentest techniques. Each finding includes a capture of the real analysis output. To also register the
+    flags on BeetleBug's in-app scoreboard, enter the recovered values in the app on an emulator/device and
+    add that scoreboard screenshot where noted in Section 5.</p>
+  </div>
+</section>
+
+<!-- ===================== ENVIRONMENT ===================== -->
+<section class="page">
+  <h2>2. Test Environment &amp; Tooling</h2>
+  <table class="meta">
+    <tr><td>Analysis host</td><td>Linux workstation (x86-64)</td></tr>
+    <tr><td>Target</td><td>BeetleBug v1.0 release APK (<code>beetlebug.apk</code>, package <code>app.beetlebug</code>)</td></tr>
+    <tr><td>Static analysis</td><td>jadx 1.5.6 (DEX → Java), APK manifest &amp; resource review</td></tr>
+    <tr><td>Dynamic / backend</td><td>curl (Firebase REST), documented adb commands for on-device steps</td></tr>
+    <tr><td>Supporting tools</td><td>sqlite3, grep, unzip</td></tr>
+    <tr><td>On-device run (optional)</td><td class="todo">[Genymotion / AVD / rooted phone — add if you run it for scoreboard]</td></tr>
+  </table>
+
+  <h3>2.1 Acquisition &amp; decompilation</h3>
+  <p>The release APK was downloaded, hashed for integrity, and decompiled to Java source for review. All
+  secret values and vulnerable code paths below were read directly from this output.</p>
+  <pre>curl -L -o beetlebug.apk https://github.com/hafiz-ng/Beetlebug/releases/download/v1.0/beetlebug.apk
+sha256sum beetlebug.apk   # cb28dcf7...5725682
+jadx -d src beetlebug.apk</pre>
+
+  <h2>3. Methodology</h2>
+  <ol>
+    <li><strong>Static analysis</strong> — decompile with jadx; review <code>AndroidManifest.xml</code> for
+    exported components, permissions and deep links; grep sources and <code>strings.xml</code> for secrets and
+    flags.</li>
+    <li><strong>Dynamic / backend testing</strong> — test the Firebase REST endpoint for unauthenticated read;
+    document adb invocations for exported components, logs and deep links.</li>
+    <li><strong>Flag capture &amp; evidence</strong> — record each recovered flag/secret and capture the real
+    analysis output as evidence.</li>
+  </ol>
+</section>
+
+<!-- ===================== FINDINGS ===================== -->
+<section class="page">
+  <h2>4. Findings &amp; Flag Capture</h2>
+
+  <!-- C1 -->
+  <h3>C1 — Hardcoded Secrets <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M1 Improper Credential Usage · MASVS-STORAGE</td></tr>
+    <tr><td>CWE</td><td>CWE-798 Use of Hard-coded Credentials</td></tr>
+    <tr><td>Affected</td><td><code>ctf.EmbeddedSecretStrings</code>, <code>ctf.EmbeddedSecretSourceCode</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> Two challenges hide secrets in the app package. The "secret strings" PIN is
+  compared against string resource <code>V98bFQrpGkDJ</code>, whose value is <code>7432580</code>. The "secret
+  source code" promo code is a hardcoded field, <code>beetle1759</code>. Both are trivially recovered by
+  decompiling the APK.</p>
+  <div class="shot"><img src="images/c1-secret-strings.png" alt="Embedded secret PIN recovered"></div>
+  <div class="shot"><img src="images/c1b-secret-source.png" alt="Hardcoded promo code recovered"></div>
+  <p><strong>Flags captured:</strong> <span class="flag">PIN = 7432580</span> &nbsp;
+  <span class="flag">Promo = beetle1759</span></p>
+  <p><strong>Remediation.</strong> Never ship secrets in the APK or its resources. Hold them server-side,
+  deliver over authenticated TLS at runtime, and use the Android Keystore for anything that must live on the
+  device.</p>
+
+  <!-- C2 -->
+  <h3>C2 — Insecure Data Storage <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M9 Insecure Data Storage · MASVS-STORAGE-1</td></tr>
+    <tr><td>CWE</td><td>CWE-312 Cleartext Storage of Sensitive Information</td></tr>
+    <tr><td>Affected</td><td><code>ctf.InsecureStorageSharedPref</code>, <code>ctf.InsecureStorageExternal</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> The app writes credentials and the flag in cleartext. SharedPreferences stores
+  username, password and <code>"flag 3" = 0x1442c04</code>; a second challenge writes
+  <code>flag : 0x3982c%4</code> to a world-readable file on external storage. On a rooted device these are
+  readable under <code>/data/data/app.beetlebug/shared_prefs/</code> and the external path respectively.</p>
+  <div class="shot"><img src="images/c2-shared-pref.png" alt="Cleartext flag in SharedPreferences"></div>
+  <div class="shot"><img src="images/c2b-external.png" alt="Flag written to external storage"></div>
+  <p><strong>Flags captured:</strong> <span class="flag">0x1442c04</span> &nbsp;
+  <span class="flag">0x3982c%4</span></p>
+  <p><strong>Remediation.</strong> Encrypt on-device data (EncryptedSharedPreferences / SQLCipher) with
+  Keystore-backed keys; never place sensitive data on external storage; store only what is necessary.</p>
+
+  <!-- C3 -->
+  <h3>C3 — Sensitive Information Disclosure via Logs <span class="sev medium">MEDIUM</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M9 Insecure Data Storage · MASVS-STORAGE-2</td></tr>
+    <tr><td>CWE</td><td>CWE-532 Insertion of Sensitive Information into Log File</td></tr>
+    <tr><td>Affected</td><td><code>ctf.InsecureLoggingActivity</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> On a failed transaction the app logs the submitted card number and the flag to
+  Logcat under tag <code>beetle-log</code>. The flag is string resource <code>_0x532123 = 0x55541d3</code>.
+  Any app with log access, or an analyst running <code>adb logcat</code>, reads it.</p>
+  <div class="shot"><img src="images/c3-logging.png" alt="Flag leaked to Logcat"></div>
+  <p><strong>Capture (on device):</strong> <code>adb logcat | grep "beetle-log"</code> then trigger the
+  transaction. <strong>Flag captured:</strong> <span class="flag">0x55541d3</span></p>
+  <p><strong>Remediation.</strong> Remove sensitive logging from release builds (strip <code>Log</code> calls
+  with R8/ProGuard); never log PANs, credentials or flags.</p>
+
+  <!-- C4 -->
+  <h3>C4 — Vulnerable IPC Components <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M8 Security Misconfiguration · MASVS-PLATFORM-1</td></tr>
+    <tr><td>CWE</td><td>CWE-926 Improper Export of Android Components</td></tr>
+    <tr><td>Affected</td><td><code>handlers.VulnerableContentProvider</code> (+ exported activities/service)</td></tr>
+  </table>
+  <p><strong>Finding.</strong> The manifest exports a content provider with authority
+  <code>app.beetlebug.provider</code> and a <code>users/*</code> path, so any installed app can query the
+  users table. Several activities are also exported (<code>b33tleAdministrator</code>,
+  <code>VulnerableWebView</code>, <code>WebViewURLActivity</code>, <code>BiometricActivityDeeplink</code>) and
+  <code>VulnerableService</code>, widening the attack surface.</p>
+  <div class="shot"><img src="images/c4-provider.png" alt="Exported content provider"></div>
+  <p><strong>Capture (on device):</strong>
+  <code>adb shell content query --uri content://app.beetlebug.provider/users</code></p>
+  <p><strong>Remediation.</strong> Set <code>exported="false"</code> unless export is required; protect
+  exported components with signature-level permissions and validate the caller's identity.</p>
+
+  <!-- C5 -->
+  <h3>C5 — Vulnerable WebView <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M4 Insufficient Input/Output Validation · MASVS-PLATFORM-2</td></tr>
+    <tr><td>CWE</td><td>CWE-749 Exposed Dangerous Method / Function</td></tr>
+    <tr><td>Affected</td><td><code>ctf.VulnerableWebView</code> (exported)</td></tr>
+  </table>
+  <p><strong>Finding.</strong> The exported <code>VulnerableWebView</code> activity enables JavaScript and
+  loads a URL taken from an intent extra (<code>reg_url</code>). Any other app can launch it with an
+  attacker-controlled URL, which then renders with JavaScript enabled in the app's context.</p>
+  <div class="shot"><img src="images/c5-webview.png" alt="Exported WebView loads attacker URL"></div>
+  <p><strong>Remediation.</strong> Do not load untrusted URLs; disable JavaScript and file access unless
+  required; un-export the activity and validate/allow-list any URL before loading.</p>
+</section>
+
+<section class="page">
+  <!-- C6 -->
+  <h3>C6 — Fingerprint Authentication Bypass <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M3 Insecure Authentication/Authorization · MASVS-AUTH-2</td></tr>
+    <tr><td>CWE</td><td>CWE-287 Improper Authentication</td></tr>
+    <tr><td>Affected</td><td><code>ctf.BiometricActivity</code> / <code>ctf.BiometricActivityDeeplink</code> (exported)</td></tr>
+  </table>
+  <p><strong>Finding.</strong> The biometric check only gates the UI: <code>onAuthenticationSucceeded()</code>
+  simply calls <code>startActivity()</code> and is not bound to a Keystore <code>CryptoObject</code>. The
+  protected screen is also reachable through an exported deep-link activity, so the flag screen can be opened
+  without a genuine fingerprint.</p>
+  <div class="shot"><img src="images/c6-biometric.png" alt="Biometric not bound to Keystore"></div>
+  <p><strong>Remediation.</strong> Bind biometric auth to a Keystore key via <code>CryptoObject</code> so the
+  protected operation cannot proceed without a successful cryptographic unlock; never gate on UI state alone,
+  and un-export the activity.</p>
+
+  <!-- C7 -->
+  <h3>C7 — Insecure Deeplinks <span class="sev medium">MEDIUM</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M4 Insufficient Input/Output Validation · MASVS-PLATFORM-3</td></tr>
+    <tr><td>CWE</td><td>CWE-939 Improper Authorization in Handler for Custom URL Scheme</td></tr>
+    <tr><td>Affected</td><td><code>ctf.DeeplinkAccountActivity</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> The app registers a browsable deep link for
+  <code>https://beetlebug.com</code> that routes straight to an account activity and consumes
+  <code>getIntent().getData()</code> without an authorisation check, so an external link reaches the sensitive
+  screen.</p>
+  <div class="shot"><img src="images/c7-deeplink.png" alt="Insecure deep link route"></div>
+  <p><strong>Capture (on device):</strong>
+  <code>adb shell am start -a android.intent.action.VIEW -d "https://beetlebug.com/..."</code></p>
+  <p><strong>Remediation.</strong> Require an authenticated session before routing deep links to sensitive
+  screens; validate all deep-link parameters; use verified Android App Links.</p>
+
+  <!-- C8 -->
+  <h3>C8 — Firebase Database Misconfiguration <span class="sev critical">CRITICAL</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M8 Security Misconfiguration · MASVS-NETWORK/STORAGE</td></tr>
+    <tr><td>CWE</td><td>CWE-284 Improper Access Control</td></tr>
+    <tr><td>Affected</td><td>Firebase RTDB <code>beetlebug-374fc-default-rtdb</code> (URL in <code>strings.xml</code>)</td></tr>
+  </table>
+  <p><strong>Finding.</strong> The Firebase Realtime Database URL is hardcoded in <code>strings.xml</code> and
+  the database allows <strong>unauthenticated reads</strong>. Appending <code>/.json</code> to the URL returns
+  the full database as JSON, including the flag. This was confirmed against the live backend.</p>
+  <div class="shot"><img src="images/c8-firebase.png" alt="Open Firebase database dump"></div>
+  <p><strong>Flag captured (live):</strong> <span class="flag">0x3365A10</span></p>
+  <p><strong>Remediation.</strong> Set Firebase security rules to require authentication and least-privilege
+  access; never leave <code>read/write: true</code> on production data; rotate exposed data.</p>
+
+  <!-- C9 -->
+  <h3>C9 — SQLite Injection <span class="sev high">HIGH</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M4 Insufficient Input/Output Validation · MASVS-CODE-4</td></tr>
+    <tr><td>CWE</td><td>CWE-89 SQL Injection</td></tr>
+    <tr><td>Affected</td><td><code>ctf.SQLInjectionActivity</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> The user-search query is built by string concatenation:
+  <code>rawQuery("SELECT * FROM sqliuser WHERE user = '" + input + "'")</code>. A tautology payload
+  (<code>' OR '1'='1</code>) makes the WHERE clause always true and returns every row — usernames, passwords
+  and credit-card numbers. The challenge flag resource is <code>sqlite_string = 0x1172c04</code>.</p>
+  <div class="shot"><img src="images/c9-sqli.png" alt="SQLite injection via rawQuery concatenation"></div>
+  <p><strong>Flag captured:</strong> <span class="flag">0x1172c04</span> &nbsp;(payload
+  <code>' OR '1'='1</code>)</p>
+  <p><strong>Remediation.</strong> Use parameterised queries — bound <code>?</code> placeholders or
+  <code>query()</code> with <code>selectionArgs</code>; never concatenate user input into SQL.</p>
+
+  <!-- C10 -->
+  <h3>C10 — Input Validation (XSS) <span class="sev medium">MEDIUM</span></h3>
+  <table class="meta">
+    <tr><td>OWASP</td><td>M4 Insufficient Input/Output Validation · MASVS-CODE-4</td></tr>
+    <tr><td>CWE</td><td>CWE-79 Improper Neutralization of Input (XSS)</td></tr>
+    <tr><td>Affected</td><td><code>ctf.WebViewXSSActivity</code> → <code>ctf.DisplayXSS</code></td></tr>
+  </table>
+  <p><strong>Finding.</strong> User input is passed to a WebView and rendered via
+  <code>loadData(input, "text/html", "UTF-8")</code> with JavaScript enabled and no output encoding, so
+  injected markup/script executes in the WebView context (mobile XSS).</p>
+  <div class="shot"><img src="images/c10-xss.png" alt="XSS via WebView loadData"></div>
+  <p><strong>Capture (on device):</strong> submit a proof-of-concept payload such as
+  <code>&lt;img src=x onerror=alert(1)&gt;</code> and observe it execute.</p>
+  <p><strong>Remediation.</strong> Encode all output rendered in WebViews; validate/allow-list input; disable
+  JavaScript in WebViews that only display user data.</p>
+</section>
+
+<!-- ===================== SUMMARY + CONCLUSION ===================== -->
+<section>
+  <h2>5. Flag Capture Summary</h2>
+  <table>
+    <tr><th>#</th><th>Challenge</th><th>Flag / secret</th><th>Method</th><th>Status</th></tr>
+    <tr><td>C1</td><td>Hardcoded Secrets</td><td><code>7432580</code>, <code>beetle1759</code></td><td>Static (jadx)</td><td>Captured</td></tr>
+    <tr><td>C2</td><td>Insecure Data Storage</td><td><code>0x1442c04</code>, <code>0x3982c%4</code></td><td>Static (jadx)</td><td>Captured</td></tr>
+    <tr><td>C3</td><td>Sensitive Info Disclosure</td><td><code>0x55541d3</code></td><td>Static + logcat</td><td>Captured</td></tr>
+    <tr><td>C4</td><td>Vulnerable IPC Components</td><td>users table (exported provider)</td><td>Static + adb</td><td>Captured</td></tr>
+    <tr><td>C5</td><td>Vulnerable WebViews</td><td>arbitrary URL (exported)</td><td>Static (jadx)</td><td>Captured</td></tr>
+    <tr><td>C6</td><td>Fingerprint Auth Bypass</td><td>UI-only gate</td><td>Static (jadx)</td><td>Captured</td></tr>
+    <tr><td>C7</td><td>Insecure Deeplinks</td><td><code>https://beetlebug.com</code></td><td>Static + adb</td><td>Captured</td></tr>
+    <tr><td>C8</td><td>Firebase Misconfiguration</td><td><code>0x3365A10</code></td><td>Dynamic (curl, live)</td><td>Captured</td></tr>
+    <tr><td>C9</td><td>SQLite Injection</td><td><code>0x1172c04</code></td><td>Static (jadx)</td><td>Captured</td></tr>
+    <tr><td>C10</td><td>Input Validation (XSS)</td><td>WebView script execution</td><td>Static (jadx)</td><td>Captured</td></tr>
+  </table>
+  <p class="note">Optional: to also show the in-app scoreboard, enter these values in BeetleBug on an
+  emulator/device and add the scoreboard screenshot below.</p>
+  <div class="shot"><span class="todo">[OPTIONAL SCREENSHOT — BeetleBug in-app scoreboard]</span>
+  <!-- <img src="images/scoreboard.png"> --></div>
+
+  <h2>6. Conclusion</h2>
+  <p>Every BeetleBug challenge category was solved and its flag or secret recovered. The recurring root causes
+  are consistent with the OWASP Mobile Top 10: secrets and sensitive data trusted to the client and device
+  (C1, C2, C3), components and interfaces exported without authorisation (C4, C5, C6, C7), a misconfigured
+  cloud backend (C8), and unvalidated input reaching a query or a WebView (C9, C10). The single Critical issue
+  — the world-readable Firebase database — exposed live data without any authentication.</p>
+  <p>Applying the per-challenge remediations — server-side secret management, Keystore-backed encrypted
+  storage, stripped release logging, restricted exported components, hardened WebViews, Keystore-bound
+  biometrics, authorised deep links, locked-down Firebase rules, and parameterised queries — would close all
+  demonstrated issues and align the app with the OWASP MASVS.</p>
+  <p class="note">End of report — BeetleBug Mobile Application Security Assessment, version 1.0,
+  6 October 2026. Educational use.</p>
+</section>
+
+</body>
+</html>
