@@ -69,7 +69,12 @@
     <li>Ran <code>scoutsuite/run_scoutsuite.sh</code>. It installs ScoutSuite into a Python virtualenv and runs <code>scout azure --cli --subscriptions &lt;id&gt; --tenant &lt;id&gt;</code>. The scanning identity only needs Reader, Security Reader and Global Reader.</li>
     <li>Downloaded the HTML report and ran <code>extract_findings.py</code> to list every flagged rule.</li>
   </ol>
-  <div class="shot avoid">[ Insert screenshot: ScoutSuite dashboard showing the service summary ]</div>
+  <h4>Scan command</h4>
+<pre>$ az account show --query "{sub:id, tenant:tenantId}" -o table
+$ python3 -m venv ~/scoutsuite-venv &amp;&amp; ~/scoutsuite-venv/bin/pip install scoutsuite
+$ ~/scoutsuite-venv/bin/scout azure --cli --subscriptions $SUB_ID --tenant $TENANT_ID \
+      --report-dir ~/scoutsuite-report --no-browser
+$ python3 extract_findings.py ~/scoutsuite-report    # lists every flagged rule by severity</pre>
 </section>
 
 <!-- ============ 3. FINDINGS ============ -->
@@ -85,7 +90,20 @@
     <tr><td class="k">Blast radius</td><td><b>Entire subscription.</b> <code>*</code> includes <code>Microsoft.Authorization/*</code>. The attacker can create new role assignments (persistence), read storage keys, run commands on the VM (<code>runCommand</code>), delete resources and logs, and deploy expensive resources such as cryptominers. That covers every resource in the lab, plus anything else in the subscription.</td></tr>
     <tr><td class="k">Remediation</td><td><b>Delete the wildcard custom role, reassign the user a least-privilege built-in role scoped to <code>rg-scoutlab</code>, and enforce MFA through Conditional Access or Security Defaults.</b></td></tr>
   </table>
-  <div class="shot">[ Insert screenshot: ScoutSuite RBAC finding ]</div>
+  <h4>Evidence: deployed configuration</h4>
+<pre># terraform/main.tf
+resource "azurerm_role_definition" "custom_owner" {
+  scope = data.azurerm_subscription.current.id
+  permissions { actions = ["*"]  not_actions = [] }        # owner-equivalent
+}
+resource "azurerm_role_assignment" "lab_user_custom_owner" {
+  scope        = data.azurerm_subscription.current.id      # whole subscription
+  principal_id = azuread_user.lab_user.object_id           # standard user
+}</pre>
+<h4>Verify</h4>
+<pre>$ az role definition list --custom-role-only true \
+    --query "[?contains(permissions[0].actions,'*')].{role:roleName,scope:assignableScopes[0]}" -o table
+$ az role assignment list --assignee lab.operator@&lt;tenant&gt; --all -o table</pre>
   </div>
 
   <div class="avoid">
@@ -97,7 +115,22 @@
     <tr><td class="k">Blast radius</td><td><b>All data in the container</b>, here the (synthetic) customer PII: names, emails, phone numbers and national IDs. With real data this would be a notifiable breach under Kenya's Data Protection Act 2019. Anonymous access is read-only, but shared-key auth is still enabled, so any leaked key (for example through F1 or F3) gives full read/write/delete on the account.</td></tr>
     <tr><td class="k">Remediation</td><td><b>Set <code>allowBlobPublicAccess=false</code>, require secure transfer (HTTPS only), set the network default action to Deny with a private endpoint, and disable shared-key access in favour of Entra ID auth.</b></td></tr>
   </table>
-  <div class="shot">[ Insert screenshot: ScoutSuite storage finding, plus curl listing the public container ]</div>
+  <h4>Evidence: deployed configuration</h4>
+<pre># terraform/main.tf
+resource "azurerm_storage_account" "lab" {
+  https_traffic_only_enabled      = false     # HTTP allowed
+  allow_nested_items_to_be_public = true      # anonymous access permitted
+  shared_access_key_enabled       = true
+  public_network_access_enabled   = true
+  network_rules { default_action = "Allow" }  # all networks
+}
+resource "azurerm_storage_container" "public" {
+  name                  = "customer-exports"
+  container_access_type = "container"         # anonymous list + read
+}</pre>
+<h4>Verify (no credentials)</h4>
+<pre>$ curl -s "http://&lt;acct&gt;.blob.core.windows.net/customer-exports?restype=container&amp;comp=list"
+$ curl -s "http://&lt;acct&gt;.blob.core.windows.net/customer-exports/customer_records_FAKE.csv"</pre>
   </div>
 
   <div class="avoid">
@@ -109,7 +142,23 @@
     <tr><td class="k">Blast radius</td><td><b>The VM plus the whole resource group and its storage.</b> From a shell, the attacker calls IMDS (<code>169.254.169.254/metadata/identity/oauth2/token</code>) and gets a token for the VM's system-assigned identity. That identity holds <i>Contributor</i> on <code>rg-scoutlab</code> and <i>Storage Blob Data Contributor</i> on the account, so the attacker can modify or delete every resource in the group and read, overwrite or ransom all blobs, private ones included. The VNet also becomes a pivot point for anything later added to it.</td></tr>
     <tr><td class="k">Remediation</td><td><b>Remove the Internet-sourced 22/3389 rules and use Azure Bastion or JIT access, switch the VM to SSH-key-only auth, and reduce the managed identity to the minimum role it needs (or remove it).</b></td></tr>
   </table>
-  <div class="shot">[ Insert screenshot: ScoutSuite NSG finding ]</div>
+  <h4>Evidence: deployed configuration</h4>
+<pre># terraform/main.tf
+security_rule { name = "Allow-SSH-Any"  destination_port_range = "22"
+                source_address_prefix = "*"  access = "Allow"  direction = "Inbound" }
+security_rule { name = "Allow-RDP-Any"  destination_port_range = "3389"
+                source_address_prefix = "*"  access = "Allow"  direction = "Inbound" }
+
+resource "azurerm_linux_virtual_machine" "web" {
+  disable_password_authentication = false
+  identity { type = "SystemAssigned" }          # + Contributor on rg-scoutlab
+}</pre>
+<h4>Verify</h4>
+<pre>$ az network nsg rule list -g rg-scoutlab --nsg-name nsg-scoutlab-web \
+    --query "[?sourceAddressPrefix=='*'].{rule:name,port:destinationPortRange}" -o table
+$ nmap -Pn -p 22,3389 &lt;vm_public_ip&gt;
+# from a shell on the VM: managed-identity token via IMDS
+$ curl -s -H Metadata:true "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&amp;resource=https://management.azure.com/"</pre>
   </div>
 </section>
 

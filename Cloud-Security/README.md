@@ -25,7 +25,7 @@ cd ../scoutsuite && ./run_scoutsuite.sh
 python3 extract_findings.py ~/scoutsuite-report
 ```
 
-Take screenshots of the ScoutSuite dashboard and the RBAC, Storage and NSG findings, then drop them into the `[ Insert screenshot ]` boxes in `report/Azure_Cloud_Security_Report.html` and re-print it to PDF.
+Each finding in the report includes the deployed configuration and a verification command as evidence.
 
 ## Findings
 
