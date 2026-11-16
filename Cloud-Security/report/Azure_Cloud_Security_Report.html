@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Azure Cloud Security Report</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .score{font-weight:bold;text-align:center;}
+  .rank td:first-child{font-weight:bold;text-align:center;width:6%;}
+  .diagram img{width:100%;border:1px solid var(--rule);}
+  td.k{width:22%;font-weight:bold;background:#f6f9f7;}
+</style>
+</head>
+<body>
+
+<!-- ============ TITLE ============ -->
+<section class="page">
+  <div class="classbar">CONFIDENTIAL — LAB ENVIRONMENT</div>
+  <div class="titlewrap">
+    <h1 class="title-main">Azure Cloud Security Assessment</h1>
+    <p class="title-sub">ScoutSuite Review of an Intentionally Insecure Environment</p>
+    <br>
+    <table class="meta">
+      <tr><td>Assignment</td><td>Cloud Security (Africa Hackon)</td></tr>
+      <tr><td>Author</td><td>Nelson Ngumo</td></tr>
+      <tr><td>Date</td><td>16 November 2026</td></tr>
+      <tr><td>Tool</td><td>NCC Group ScoutSuite (Azure provider, <code>scout azure --cli</code>)</td></tr>
+      <tr><td>Scope</td><td>1 Entra ID tenant · 1 subscription · resource group <code>rg-scoutlab</code></td></tr>
+      <tr><td>Deployment</td><td>Terraform (<code>Cloud-Security/terraform</code>)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 1. SUMMARY ============ -->
+<section class="page">
+  <h2>1. Executive Summary</h2>
+  <p>I deployed a small Azure environment with deliberate misconfigurations and scanned it with ScoutSuite. I picked three findings, one each for <b>Identity</b>, <b>Data</b> and <b>Network</b>. These three findings link up into a single attack path. An anonymous attacker can read customer data with no credentials at all. A password guess on an exposed VM gives an attacker a managed-identity token that controls the whole resource group. A single stolen user password gives control of the entire subscription.</p>
+
+  <table class="rank avoid">
+    <tr><th>#</th><th>Finding</th><th>Category</th><th>Severity</th><th>Fix first because…</th></tr>
+    <tr><td>1</td><td>F2 Public blob container, HTTP allowed</td><td>Data</td><td><span class="sev critical">CRITICAL</span></td><td>Exploitable right now with one unauthenticated HTTP request. PII is already exposed.</td></tr>
+    <tr><td>2</td><td>F3 NSG allows SSH/RDP from Internet</td><td>Network</td><td><span class="sev high">HIGH</span></td><td>Bots scan for it constantly. A foothold leads to a managed-identity token with Contributor on the resource group.</td></tr>
+    <tr><td>3</td><td>F1 Custom subscription-owner role (<code>*</code>) on a standard user</td><td>Identity</td><td><span class="sev high">HIGH</span></td><td>Largest blast radius (whole subscription), but the attacker first has to steal the credential.</td></tr>
+  </table>
+
+  <h3>Environment inventory</h3>
+  <table>
+    <tr><th>Required component</th><th>Deployed resource</th><th>Deliberate weakness</th></tr>
+    <tr><td>User</td><td><code>lab.operator@&lt;tenant&gt;.onmicrosoft.com</code></td><td>Custom role with <code>Actions=["*"]</code> at subscription scope, password-only sign-in</td></tr>
+    <tr><td>Azure Tenant</td><td>Default Entra ID tenant</td><td>No Conditional Access / MFA enforcement for the lab user</td></tr>
+    <tr><td>Subscription</td><td>Personal / student subscription</td><td>Holds the custom owner role definition</td></tr>
+    <tr><td>Resource Group</td><td><code>rg-scoutlab</code></td><td>VM managed identity holds <i>Contributor</i> on it</td></tr>
+    <tr><td>Virtual Network</td><td><code>vnet-scoutlab</code> 10.10.0.0/16</td><td>No Bastion, no private endpoints</td></tr>
+    <tr><td>Subnet</td><td><code>snet-web</code> 10.10.1.0/24 + <code>nsg-scoutlab-web</code></td><td>Inbound 22 and 3389 from <code>*</code></td></tr>
+    <tr><td>Virtual Machine</td><td><code>vm-scoutlab-web</code> Ubuntu 22.04, static public IP</td><td>Password authentication, over-privileged system-assigned identity</td></tr>
+    <tr><td>Storage Account</td><td><code>stscoutlab&lt;rand&gt;</code> / container <code>customer-exports</code></td><td>Anonymous container access, HTTPS not required, all networks allowed</td></tr>
+  </table>
+</section>
+
+<!-- ============ 2. ARCHITECTURE ============ -->
+<section class="page">
+  <h2>2. Architecture Diagram</h2>
+  <div class="diagram"><img src="images/architecture.png" alt="Architecture diagram of the insecure Azure lab"></div>
+  <p class="note">Source: <code>Cloud-Security/diagram/architecture.svg</code>. The red boxes are the deployed misconfigurations, and the red arrows are the attack paths analysed in Section 3.</p>
+
+  <h3>ScoutSuite deployment</h3>
+  <ol>
+    <li>Opened Azure Cloud Shell (Bash), which is already signed in with <code>az</code>.</li>
+    <li>Ran <code>scoutsuite/run_scoutsuite.sh</code>. It installs ScoutSuite into a Python virtualenv and runs <code>scout azure --cli --subscriptions &lt;id&gt; --tenant &lt;id&gt;</code>. The scanning identity only needs Reader, Security Reader and Global Reader.</li>
+    <li>Downloaded the HTML report and ran <code>extract_findings.py</code> to list every flagged rule.</li>
+  </ol>
+  <div class="shot avoid">[ Insert screenshot: ScoutSuite dashboard showing the service summary ]</div>
+</section>
+
+<!-- ============ 3. FINDINGS ============ -->
+<section class="page">
+  <h2>3. Findings</h2>
+
+  <div class="avoid">
+  <h3>F1 Identity: Custom subscription-owner role assigned to a standard user <span class="sev high">HIGH</span></h3>
+  <table>
+    <tr><td class="k">ScoutSuite</td><td>RBAC → custom role allowing <code>*</code> (owner-equivalent) at subscription scope. Maps to CIS Azure "Ensure that no custom subscription administrator roles exist".</td></tr>
+    <tr><td class="k">Resource</td><td>Role <code>scoutlab-custom-subscription-owner</code> → assigned to <code>lab.operator</code> at <code>/subscriptions/&lt;id&gt;</code></td></tr>
+    <tr><td class="k">Exploitability</td><td><b>Medium.</b> The attacker needs this user's password first, through phishing, password spraying or credential reuse. The user signs in with a password only and no Conditional Access policy requires MFA, so one leaked password is enough. The role is custom, so it is easy to miss in reviews that only look for the built-in <i>Owner</i> role.</td></tr>
+    <tr><td class="k">Blast radius</td><td><b>Entire subscription.</b> <code>*</code> includes <code>Microsoft.Authorization/*</code>. The attacker can create new role assignments (persistence), read storage keys, run commands on the VM (<code>runCommand</code>), delete resources and logs, and deploy expensive resources such as cryptominers. That covers every resource in the lab, plus anything else in the subscription.</td></tr>
+    <tr><td class="k">Remediation</td><td><b>Delete the wildcard custom role, reassign the user a least-privilege built-in role scoped to <code>rg-scoutlab</code>, and enforce MFA through Conditional Access or Security Defaults.</b></td></tr>
+  </table>
+  <div class="shot">[ Insert screenshot: ScoutSuite RBAC finding ]</div>
+  </div>
+
+  <div class="avoid">
+  <h3>F2 Data: Storage container allows anonymous access, HTTPS not enforced <span class="sev critical">CRITICAL</span></h3>
+  <table>
+    <tr><td class="k">ScoutSuite</td><td>Storage Accounts → "Blob containers allowing public access", "Secure transfer (HTTPS) not required", "Public traffic allowed (default action Allow)".</td></tr>
+    <tr><td class="k">Resource</td><td><code>stscoutlab&lt;rand&gt;/customer-exports</code> (access level <i>Container</i>) holding <code>customer_records_FAKE.csv</code></td></tr>
+    <tr><td class="k">Exploitability</td><td><b>Trivial.</b> No credentials are needed. The <i>Container</i> access level allows anonymous listing:<br><code>curl "http://&lt;acct&gt;.blob.core.windows.net/customer-exports?restype=container&amp;comp=list"</code><br>returns every blob name, which can then be downloaded. Storage account names are discoverable through DNS enumeration of <code>*.blob.core.windows.net</code>. Because HTTP is allowed, anyone on the network path can also read data in transit.</td></tr>
+    <tr><td class="k">Blast radius</td><td><b>All data in the container</b>, here the (synthetic) customer PII: names, emails, phone numbers and national IDs. With real data this would be a notifiable breach under Kenya's Data Protection Act 2019. Anonymous access is read-only, but shared-key auth is still enabled, so any leaked key (for example through F1 or F3) gives full read/write/delete on the account.</td></tr>
+    <tr><td class="k">Remediation</td><td><b>Set <code>allowBlobPublicAccess=false</code>, require secure transfer (HTTPS only), set the network default action to Deny with a private endpoint, and disable shared-key access in favour of Entra ID auth.</b></td></tr>
+  </table>
+  <div class="shot">[ Insert screenshot: ScoutSuite storage finding, plus curl listing the public container ]</div>
+  </div>
+
+  <div class="avoid">
+  <h3>F3 Network: NSG allows SSH (22) and RDP (3389) from the Internet <span class="sev high">HIGH</span></h3>
+  <table>
+    <tr><td class="k">ScoutSuite</td><td>Network → Network Security Groups: "SSH port open to the Internet" and "RDP port open to the Internet" (source <code>*</code>).</td></tr>
+    <tr><td class="k">Resource</td><td><code>nsg-scoutlab-web</code> (rules <code>Allow-SSH-Any</code>, <code>Allow-RDP-Any</code>) on <code>snet-web</code> → <code>vm-scoutlab-web</code> with a static public IP</td></tr>
+    <tr><td class="k">Exploitability</td><td><b>High likelihood, moderate effort.</b> Internet-wide scanners find open port 22 within minutes. Password authentication is enabled, so the VM can be brute-forced or credential-stuffed. The lab password is random with 16 characters, which slows this down, but any weak or reused password, or an unpatched sshd CVE, turns exposure into compromise.</td></tr>
+    <tr><td class="k">Blast radius</td><td><b>The VM plus the whole resource group and its storage.</b> From a shell, the attacker calls IMDS (<code>169.254.169.254/metadata/identity/oauth2/token</code>) and gets a token for the VM's system-assigned identity. That identity holds <i>Contributor</i> on <code>rg-scoutlab</code> and <i>Storage Blob Data Contributor</i> on the account, so the attacker can modify or delete every resource in the group and read, overwrite or ransom all blobs, private ones included. The VNet also becomes a pivot point for anything later added to it.</td></tr>
+    <tr><td class="k">Remediation</td><td><b>Remove the Internet-sourced 22/3389 rules and use Azure Bastion or JIT access, switch the VM to SSH-key-only auth, and reduce the managed identity to the minimum role it needs (or remove it).</b></td></tr>
+  </table>
+  <div class="shot">[ Insert screenshot: ScoutSuite NSG finding ]</div>
+  </div>
+</section>
+
+<!-- ============ 4. PRIORITISATION ============ -->
+<section>
+  <h2>4. Prioritisation</h2>
+  <p>Each finding is scored as <b>Likelihood × Impact</b> (1 to 5) for this specific environment. Ties are broken by how cheap the fix is.</p>
+  <table class="avoid">
+    <tr><th>Priority</th><th>Finding</th><th>Likelihood</th><th>Impact</th><th>Risk</th><th>Effort to fix</th><th>One-line remediation</th></tr>
+    <tr><td class="score">P1</td><td>F2 Data</td><td class="score">5</td><td class="score">4</td><td class="score">20</td><td>Minutes, no downtime</td><td>Disable anonymous blob access and require HTTPS, then restrict the network to a private endpoint.</td></tr>
+    <tr><td class="score">P2</td><td>F3 Network</td><td class="score">4</td><td class="score">4</td><td class="score">16</td><td>Minutes (Bastion takes about 1 hour)</td><td>Delete the 0.0.0.0/0 SSH/RDP rules, use Bastion/JIT and SSH keys, and reduce the VM identity's role.</td></tr>
+    <tr><td class="score">P3</td><td>F1 Identity</td><td class="score">3</td><td class="score">5</td><td class="score">15</td><td>Minutes, plus coordination with the user</td><td>Replace the wildcard custom role with a resource-group-scoped built-in role and enforce MFA.</td></tr>
+  </table>
+
+  <h3>Rationale</h3>
+  <ul>
+    <li><b>F2 first:</b> it is the only finding that is being exploited by default. The data is public right now and needs zero attacker skill. The fix is a single setting and breaks nothing legitimate.</li>
+    <li><b>F3 second:</b> it is constantly targeted by automated scanning and is the entry point to the managed-identity chain, which reaches F2's data even after anonymous access is turned off. Closing it removes the only network path into the environment.</li>
+    <li><b>F1 third, but this week:</b> its impact is the highest of the three, but the attacker first needs a stolen credential. Enforcing MFA quickly lowers likelihood while the role is reworked.</li>
+  </ul>
+
+  <div class="callout avoid">
+    <b>Attack chain if nothing is fixed:</b> Internet → brute-force SSH (F3) → IMDS token → Contributor on the RG and blob read/write (F2 data) → if a subscription-level credential is found on the host or phished, then <code>*</code> on the subscription (F1). Fixing F3 and F1 breaks the chain at both ends. Fixing F2 closes the separate anonymous path.
+  </div>
+
+  <h3>Clean-up</h3>
+  <p><code>terraform destroy</code> removes every lab resource, including the custom role and the Entra ID user.</p>
+</section>
+
+</body>
+</html>

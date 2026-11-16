@@ -1,0 +1,5 @@
+customer_id,full_name,email,phone,national_id,card_last4
+C-0001,Test User One,test.one@example.com,+254700000001,00000001,4242
+C-0002,Test User Two,test.two@example.com,+254700000002,00000002,1881
+C-0003,Test User Three,test.three@example.com,+254700000003,00000003,0005
+# SYNTHETIC DATA — generated for a security lab. No real persons.
